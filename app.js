@@ -34,6 +34,39 @@ io.on("connection", function (uniquesocket){//callback function when a new socke
     else{
         uniquesocket.emit("spectatorRole");
     }
+
+    uniquesocket.on("disconnected",function(){
+        console.log("Disconnected");
+        if(uniquesocket.id === players.white){
+            delete players.white;
+        }else if(uniquesocket.id === players.black){
+            delete players.black;
+        }
+    });
+
+    uniquesocket.on("move", (move)=>{
+
+        try{
+            if(chess.turn() === 'W' && uniquesocket.id !== players.white) return;//if the player is not white and its white's turn, return
+            if(chess.turn() === 'B' && uniquesocket.id !== players.black) return;
+
+            const result = chess.move(move);//move the piece
+            if(result){
+                currentPlayer = chess.turn();//get the current player
+                io.emit("move",move); //emit the move to all players to the front-end
+                io.emit("boardState",chess.fen());
+
+            }else{
+                console.log("Invalid Move:", move);
+                uniquesocket.emit("invalidMove", move);//emit the invalid move to the player who made the move   
+            }
+
+        }
+        catch(err){
+            console.log("Error:", err);
+            uniquesocket.emit("Invalid Move : ", move);//emit the invalid move to the player who made the move
+        }
+    });
 });
 
 server.listen(3000, function () {
